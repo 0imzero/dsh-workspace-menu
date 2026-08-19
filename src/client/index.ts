@@ -316,7 +316,7 @@ function showMenu(x: number, y: number, items: MenuItem[]): void {
       cleanup()
     }
   }
-  const onScroll = (): void => {
+  const onResize = (): void => {
     removeMenu()
     cleanup()
   }
@@ -324,14 +324,12 @@ function showMenu(x: number, y: number, items: MenuItem[]): void {
     document.removeEventListener('mousedown', close, true)
     document.removeEventListener('keydown', onKey, true)
     window.removeEventListener('blur', cleanup)
-    window.removeEventListener('resize', onScroll)
-    document.removeEventListener('scroll', onScroll, true)
+    window.removeEventListener('resize', onResize)
   }
   document.addEventListener('mousedown', close, true)
   document.addEventListener('keydown', onKey, true)
   window.addEventListener('blur', cleanup)
-  window.addEventListener('resize', onScroll)
-  document.addEventListener('scroll', onScroll, true)
+  window.addEventListener('resize', onResize)
 }
 
 function promptText(title: string, initial: string): Promise<string | null> {
