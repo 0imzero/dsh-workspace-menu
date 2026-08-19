@@ -45,6 +45,6 @@ npm run build:client
 ## Notes
 
 - Does not modify DSH built-in source; locates rows via DOM events and React fiber.
-- "Open in file explorer" calls the host to launch the system file manager.
+- "Open in file explorer" calls the host to launch the system file manager: Windows Explorer on Windows, Finder on macOS, and xdg-open / gio / common file managers on Linux.
 - Pin and unread state is stored in browser localStorage.
 - Opening in a new window uses the `?session=<id>` deep link.

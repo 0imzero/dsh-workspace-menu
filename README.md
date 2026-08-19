@@ -45,6 +45,6 @@ npm run build:client
 ## 说明
 
 - 不修改 DSH 内置源码，通过 DOM 事件和 React fiber 定位工作区/会话行。
-- “在资源管理器中打开”由 Host 调用系统文件管理器。
+- “在资源管理器中打开”由 Host 调用系统文件管理器：Windows 用资源管理器，macOS 用 Finder，Linux 自动选择 xdg-open / gio / 常见文件管理器。
 - 置顶和未读状态存在浏览器 localStorage。
 - 新窗口打开依赖 `?session=<id>` 深链。
