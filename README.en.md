@@ -25,7 +25,7 @@ Chat row (double-click or right-click):
 - Open in new window
 - Open containing folder
 
-Each feature can be enabled or disabled in the DSH settings page.
+Settings are integrated into the DSH General settings page; each feature can be enabled or disabled individually.
 
 ## Install
 

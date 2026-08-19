@@ -786,7 +786,46 @@ function injectStyles(): () => void {
   return () => style.remove()
 }
 
-function SettingsSection(): ReactNode {
+function Switch({ checked, onChange, label }: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+}): ReactNode {
+  const track: CSSProperties = {
+    position: 'relative',
+    display: 'inline-flex',
+    width: 36,
+    height: 20,
+    borderRadius: 999,
+    background: checked ? 'var(--dsw-alias-brand, #4d6bfe)' : 'var(--dsw-alias-bg-input, #2a2a32)',
+    transition: 'background .18s ease',
+    flex: 'none',
+  }
+  const thumb: CSSProperties = {
+    position: 'absolute',
+    top: 2,
+    left: checked ? 18 : 2,
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+    background: '#fff',
+    transition: 'left .18s ease',
+  }
+  return createElement(
+    'label',
+    { style: { display: 'inline-flex', cursor: 'pointer', flex: 'none' } },
+    createElement('input', {
+      type: 'checkbox',
+      checked,
+      'aria-label': label,
+      onChange: (event) => onChange(event.currentTarget.checked),
+      style: { position: 'absolute', opacity: 0, width: 0, height: 0 },
+    }),
+    createElement('span', { style: track }, createElement('span', { style: thumb })),
+  )
+}
+
+function SettingsItem(): ReactNode {
   const [state, setState] = useState<PersistedState>(() => loadState())
 
   const toggle = (key: FeatureKey, value: boolean): void => {
@@ -798,42 +837,69 @@ function SettingsSection(): ReactNode {
     setState(next)
   }
 
-  const rowStyle: CSSProperties = {
+  const container: CSSProperties = {
+    width: '100%',
+    boxSizing: 'border-box',
+  }
+  const header: CSSProperties = {
+    padding: '14px 16px 6px',
+  }
+  const title: CSSProperties = {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.5,
+    color: 'var(--dsw-alias-label-primary, #e8e8ec)',
+  }
+  const desc: CSSProperties = {
+    margin: '2px 0 0',
+    fontSize: 12,
+    lineHeight: 1.5,
+    color: 'var(--dsw-alias-label-tertiary, #90909a)',
+  }
+  const groupTitle: CSSProperties = {
+    padding: '10px 16px 4px',
+    fontSize: 12,
+    fontWeight: 600,
+    lineHeight: 1.4,
+    color: 'var(--dsw-alias-label-tertiary, #90909a)',
+    textTransform: 'uppercase',
+    letterSpacing: '.04em',
+  }
+  const row: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    padding: '6px 0',
-    cursor: 'pointer',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '10px 16px',
+    borderBottom: '1px solid var(--dsw-alias-hairline, rgba(255,255,255,.06))',
     fontSize: 13,
     lineHeight: 1.4,
-  }
-  const groupStyle: CSSProperties = {
-    margin: '12px 0 4px',
-    fontWeight: 600,
-    fontSize: 13,
-    color: 'var(--dsw-alias-label-secondary, #a0a0aa)',
+    color: 'var(--dsw-alias-label-primary, #e8e8ec)',
   }
 
   return createElement(
     'div',
-    { style: { padding: '4px 2px' } },
-    createElement('p', { style: { margin: '0 0 8px', lineHeight: 1.6 } },
-      '在这里开关插件提供的各个菜单功能。改动会立即保存到当前浏览器。'),
+    { style: container },
+    createElement('div', { style: header },
+      createElement('p', { style: title }, '工作区菜单'),
+      createElement('p', { style: desc }, '开关工作区/会话右键与双击菜单里的各项功能。'),
+    ),
     FEATURE_GROUPS.map((group) =>
       createElement(
         'div',
-        { key: group.title, style: { marginBottom: 8 } },
-        createElement('div', { style: groupStyle }, group.title),
+        { key: group.title },
+        createElement('div', { style: groupTitle }, group.title),
         group.keys.map((key) =>
           createElement(
-            'label',
-            { key, style: rowStyle },
-            createElement('input', {
-              type: 'checkbox',
-              checked: state.features[key] !== false,
-              onChange: (event) => toggle(key, event.currentTarget.checked),
-            }),
+            'div',
+            { key, style: row },
             createElement('span', null, FEATURE_LABELS[key]),
+            createElement(Switch, {
+              checked: state.features[key] !== false,
+              onChange: (value) => toggle(key, value),
+              label: FEATURE_LABELS[key],
+            }),
           ),
         ),
       ),
@@ -911,17 +977,16 @@ export function apply(ctx: ClientContext): void {
     }
   }, `${PLUGIN_ID}: row menu`)
 
-  // Settings section: appears in DSH 系统设置.
+  // 集成到 DSH 通用设置（General）里，作为一项独立配置块。
   ctx.effect(() => {
-    return ctx.slots.inject('settings.section', () =>
+    return ctx.slots.inject('settings.general.item', () =>
       ctx.slots.register({
-        name: 'settings.section',
+        name: 'settings.general.item',
         id: PLUGIN_ID,
-        order: 300,
-        label: () => '工作区菜单',
-      }, SettingsSection),
+        order: 200,
+      }, SettingsItem),
     )
-  }, `${PLUGIN_ID}: settings section`)
+  }, `${PLUGIN_ID}: settings general item`)
 
   // Deep-link support for "在新窗口中打开" / "复制会话链接".
   ctx.effect(() => handleDeepLink(ctx), `${PLUGIN_ID}: deep link`)
