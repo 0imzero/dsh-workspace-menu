@@ -6,6 +6,7 @@ const PLUGIN_ID = "@dsh-external/dsh-workspace-menu"
 const CLIENT_EXTERNALS = [
   'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client',
   'cordis',
+  '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-runtime/client',
 ]

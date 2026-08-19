@@ -8,6 +8,7 @@
  * 同时注册一个 Settings 设置区，并在 `?session=<id>` 深链到达时自动打开对应会话。
  */
 import { createElement, useState, type CSSProperties, type ReactNode } from 'react'
+import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Context } from 'cordis'
 import type { SlotsService } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
@@ -826,6 +827,7 @@ function Switch({ checked, onChange, label }: {
 }
 
 function SettingsItem(): ReactNode {
+  const [open, setOpen] = useState(false)
   const [state, setState] = useState<PersistedState>(() => loadState())
 
   const toggle = (key: FeatureKey, value: boolean): void => {
@@ -842,64 +844,109 @@ function SettingsItem(): ReactNode {
     boxSizing: 'border-box',
   }
   const header: CSSProperties = {
-    padding: '14px 16px 6px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '16px 0',
+    border: 'none',
+    borderBottom: '1px solid var(--dsw-alias-border-l2)',
+    background: 'transparent',
+    cursor: 'pointer',
+    font: 'inherit',
+    color: 'inherit',
+    textAlign: 'left',
+  }
+  const headText: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+    paddingRight: 48,
   }
   const title: CSSProperties = {
     margin: 0,
     fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1.5,
-    color: 'var(--dsw-alias-label-primary, #e8e8ec)',
+    fontWeight: 400,
+    lineHeight: '22px',
+    color: 'var(--dsw-alias-label-primary)',
   }
   const desc: CSSProperties = {
-    margin: '2px 0 0',
+    margin: 0,
     fontSize: 12,
-    lineHeight: 1.5,
-    color: 'var(--dsw-alias-label-tertiary, #90909a)',
+    lineHeight: '18px',
+    color: 'var(--dsw-alias-label-tertiary)',
+  }
+  const chevron: CSSProperties = {
+    color: 'var(--dsw-alias-label-tertiary)',
+    flex: 'none',
+    transition: 'transform .16s ease',
+    transform: open ? 'rotate(180deg)' : 'none',
+  }
+  const body: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    padding: '8px 0 16px',
   }
   const groupTitle: CSSProperties = {
-    padding: '10px 16px 4px',
+    padding: '12px 0 2px',
     fontSize: 12,
     fontWeight: 600,
-    lineHeight: 1.4,
-    color: 'var(--dsw-alias-label-tertiary, #90909a)',
+    lineHeight: '18px',
+    color: 'var(--dsw-alias-label-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '.04em',
   }
-  const row: CSSProperties = {
+  const toggleRow: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    padding: '10px 16px',
-    borderBottom: '1px solid var(--dsw-alias-hairline, rgba(255,255,255,.06))',
+    minHeight: 36,
     fontSize: 13,
-    lineHeight: 1.4,
-    color: 'var(--dsw-alias-label-primary, #e8e8ec)',
+    lineHeight: '20px',
+    color: 'var(--dsw-alias-label-primary)',
   }
 
   return createElement(
     'div',
     { style: container },
-    createElement('div', { style: header },
-      createElement('p', { style: title }, '工作区菜单'),
-      createElement('p', { style: desc }, '开关工作区/会话右键与双击菜单里的各项功能。'),
+    createElement(
+      'button',
+      {
+        type: 'button',
+        style: header,
+        'aria-expanded': open,
+        onClick: () => { setOpen(!open) },
+      },
+      createElement('span', { style: headText },
+        createElement('span', { style: title }, '工作区菜单'),
+        createElement('span', { style: desc }, '开关工作区/会话右键与双击菜单里的各项功能。'),
+      ),
+      createElement('span', { style: chevron }, createElement(IconChevronDownOutline14, { size: 14 })),
     ),
-    FEATURE_GROUPS.map((group) =>
-      createElement(
-        'div',
-        { key: group.title },
-        createElement('div', { style: groupTitle }, group.title),
-        group.keys.map((key) =>
-          createElement(
-            'div',
-            { key, style: row },
-            createElement('span', null, FEATURE_LABELS[key]),
-            createElement(Switch, {
-              checked: state.features[key] !== false,
-              onChange: (value) => toggle(key, value),
-              label: FEATURE_LABELS[key],
-            }),
+    open && createElement(
+      'div',
+      { style: body },
+      FEATURE_GROUPS.map((group) =>
+        createElement(
+          'div',
+          { key: group.title },
+          createElement('div', { style: groupTitle }, group.title),
+          group.keys.map((key) =>
+            createElement(
+              'div',
+              { key, style: toggleRow },
+              createElement('span', null, FEATURE_LABELS[key]),
+              createElement(Switch, {
+                checked: state.features[key] !== false,
+                onChange: (value) => toggle(key, value),
+                label: FEATURE_LABELS[key],
+              }),
+            ),
           ),
         ),
       ),
