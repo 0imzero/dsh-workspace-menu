@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- DSH rc8 compatibility: simplify the bundle patch so the plugin no longer gets disabled by the runtime-injected entry guard.
+
 ## 1.1.2
 
 - Add `dsh.bundle.patch` manifest so the plugin installs with the official `dsh plugin add` flow.

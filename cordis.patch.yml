@@ -4,12 +4,8 @@
 #
 #   dsh plugin --profile <name> add dsh-external-dsh-workspace-menu
 #
-# This patch inserts the plugin row into the profile. The disabled guard
-# backs this row off when another enabled entry already mounts the same
-# package (e.g. a runtime-injected entry), preventing duplicate route
-# registration.
+# This patch inserts the plugin row into the profile.
 - insert:
     - id: dsh-workspace-menu
       name: '@dsh-external/dsh-workspace-menu'
       config: {}
-      disabled: !!js "[...ctx.loader.entries()].some((e) => e.options.name === '@dsh-external/dsh-workspace-menu' && e.options.id !== 'dsh-workspace-menu' && !e.disabled)"
