@@ -666,14 +666,19 @@ function injectStyles(): () => void {
     .${MENU_CLASS} {
       position: fixed;
       z-index: 2147483000;
-      min-width: 210px;
-      padding: 6px;
-      background: var(--dsw-alias-bg-layer-3, #1e1e24);
-      border: 1px solid var(--dsw-alias-border-strong, #3a3a44);
+      width: max-content;
+      min-width: 130px;
+      max-width: 220px;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.65);
+      background: color-mix(in srgb, var(--dsw-alias-bg-layer-3, #ffffff) 62%, transparent);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.5));
       border-radius: 10px;
-      box-shadow: 0 10px 34px rgba(0,0,0,.38);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
       font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-      color: var(--dsw-alias-label-primary, #e8e8ec);
+      color: var(--dsw-alias-label-primary, #1a1a1a);
       user-select: none;
     }
     .${MENU_CLASS}-item {
@@ -681,16 +686,17 @@ function injectStyles(): () => void {
       width: 100%;
       box-sizing: border-box;
       text-align: left;
-      padding: 7px 10px;
+      padding: 5px 9px;
       border: none;
-      border-radius: 7px;
+      border-radius: 6px;
       background: transparent;
       color: inherit;
       font: inherit;
       cursor: pointer;
+      white-space: nowrap;
     }
     .${MENU_CLASS}-item:hover:not(:disabled) {
-      background: var(--dsw-alias-interactive-bg-hover, rgba(255,255,255,.08));
+      background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.06));
     }
     .${MENU_CLASS}-item:disabled {
       opacity: .5;
