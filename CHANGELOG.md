@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0
+
+- Add host route lease (`WeakMap` reference counting) so duplicate loader
+  applications no longer crash with `duplicate exact route`.
+- Add "delete workspace (including disk)" action: session records are removed
+  through `@mlgbnb/dsh-archive-manager`, then the project directory is removed
+  via a narrow protected host route.
+- Add "delete session (including disk)" action that delegates to
+  `@mlgbnb/dsh-archive-manager`; the plugin does not write archive/projcache
+  files itself.
+- Add proper host build (`tsconfig.host.json` + `tsc`) so `src/index.ts` is
+  compiled instead of hand-maintaining `lib/index.js`.
+
 ## 1.1.3
 
 - DSH rc8 compatibility: simplify the bundle patch so the plugin no longer gets disabled by the runtime-injected entry guard.

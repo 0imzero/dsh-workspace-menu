@@ -42,6 +42,7 @@ type FeatureKey =
   | 'workspaceCopyPath'
   | 'workspaceNewSession'
   | 'workspaceDelete'
+  | 'workspaceDeleteDisk'
   | 'sessionPin'
   | 'sessionRename'
   | 'sessionUnread'
@@ -51,6 +52,7 @@ type FeatureKey =
   | 'sessionCopyTitle'
   | 'sessionOpenWindow'
   | 'sessionOpenFolder'
+  | 'sessionDelete'
 
 const FEATURE_KEYS: FeatureKey[] = [
   'dblclick',
@@ -61,6 +63,7 @@ const FEATURE_KEYS: FeatureKey[] = [
   'workspaceCopyPath',
   'workspaceNewSession',
   'workspaceDelete',
+  'workspaceDeleteDisk',
   'sessionPin',
   'sessionRename',
   'sessionUnread',
@@ -70,6 +73,7 @@ const FEATURE_KEYS: FeatureKey[] = [
   'sessionCopyTitle',
   'sessionOpenWindow',
   'sessionOpenFolder',
+  'sessionDelete',
 ]
 
 const DEFAULT_FEATURES: Record<FeatureKey, boolean> = {
@@ -81,6 +85,7 @@ const DEFAULT_FEATURES: Record<FeatureKey, boolean> = {
   workspaceCopyPath: true,
   workspaceNewSession: true,
   workspaceDelete: true,
+  workspaceDeleteDisk: true,
   sessionPin: true,
   sessionRename: true,
   sessionUnread: true,
@@ -90,6 +95,7 @@ const DEFAULT_FEATURES: Record<FeatureKey, boolean> = {
   sessionCopyTitle: true,
   sessionOpenWindow: true,
   sessionOpenFolder: true,
+  sessionDelete: true,
 }
 
 const FEATURE_LABELS: Record<FeatureKey, string> = {
@@ -100,7 +106,8 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   workspaceOpenExplorer: '工作区：在资源管理器中打开',
   workspaceCopyPath: '工作区：复制路径',
   workspaceNewSession: '工作区：新建会话',
-  workspaceDelete: '工作区：删除工作区',
+  workspaceDelete: '工作区：从列表中移除',
+  workspaceDeleteDisk: '工作区：删除工作区（含磁盘）',
   sessionPin: '会话：置顶/取消置顶',
   sessionRename: '会话：重命名',
   sessionUnread: '会话：标记未读/已读',
@@ -110,12 +117,13 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   sessionCopyTitle: '会话：复制会话标题',
   sessionOpenWindow: '会话：在新窗口中打开',
   sessionOpenFolder: '会话：打开所在目录',
+  sessionDelete: '会话：删除会话（含磁盘记录）',
 }
 
 const FEATURE_GROUPS: Array<{ title: string; keys: FeatureKey[] }> = [
   { title: '触发方式', keys: ['dblclick', 'contextmenu'] },
-  { title: 'Project / 工作区功能', keys: ['workspacePin', 'workspaceRename', 'workspaceOpenExplorer', 'workspaceCopyPath', 'workspaceNewSession', 'workspaceDelete'] },
-  { title: 'Chat / 会话功能', keys: ['sessionPin', 'sessionRename', 'sessionUnread', 'sessionArchive', 'sessionFork', 'sessionCopyLink', 'sessionCopyTitle', 'sessionOpenWindow', 'sessionOpenFolder'] },
+  { title: 'Project / 工作区功能', keys: ['workspacePin', 'workspaceRename', 'workspaceOpenExplorer', 'workspaceCopyPath', 'workspaceNewSession', 'workspaceDelete', 'workspaceDeleteDisk'] },
+  { title: 'Chat / 会话功能', keys: ['sessionPin', 'sessionRename', 'sessionUnread', 'sessionArchive', 'sessionFork', 'sessionCopyLink', 'sessionCopyTitle', 'sessionOpenWindow', 'sessionOpenFolder', 'sessionDelete'] },
 ]
 
 interface RowInfo {
@@ -255,6 +263,44 @@ async function openInExplorer(path: string): Promise<void> {
   })
   if (!response.ok) {
     let message = `open failed (${response.status})`
+    try {
+      const data = await response.json() as { error?: { message?: string } }
+      if (data.error?.message) message = data.error.message
+    } catch {
+      // keep status message
+    }
+    throw new Error(message)
+  }
+}
+
+/** 永久删除会话：复用 dsh-archive-manager 的删除接口，避免与它冲突。 */
+async function permanentDeleteSession(sessionId: string): Promise<void> {
+  const response = await fetch('/api/dsh-archive-manager/delete', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  })
+  if (!response.ok) {
+    let message = `delete failed (${response.status})`
+    try {
+      const data = await response.json() as { error?: string }
+      if (data.error) message = data.error
+    } catch {
+      // keep status message
+    }
+    throw new Error(message)
+  }
+}
+
+/** 删除工作区目录（会话记录先交给 dsh-archive-manager 清理，目录由本插件安全移除）。 */
+async function deleteWorkspaceDirectory(path: string): Promise<void> {
+  const response = await fetch('/dsh-workspace-menu/delete-workspace-directory', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ path }),
+  })
+  if (!response.ok) {
+    let message = `delete failed (${response.status})`
     try {
       const data = await response.json() as { error?: { message?: string } }
       if (data.error?.message) message = data.error.message
@@ -492,14 +538,44 @@ function workspaceMenu(ctx: ClientContext, workspaceId: string, title: string): 
   if (isFeatureEnabled(state, 'workspaceDelete')) {
     items.push({
       id: 'delete',
-      label: '删除工作区',
+      label: '从工作区列表中移除',
       danger: true,
       onClick: () => {
-        const ok = window.confirm(`确定删除工作区“${title}”吗？\n目录和聊天记录不会被删除，只会从工作区列表中移除。`)
+        const ok = window.confirm(`确定从 DSH 工作区列表中移除“${title}”吗？\n目录和会话记录会保留在磁盘上。`)
         if (!ok) return
         ctx.workspaces.delete(workspaceId).catch((e) => {
           console.warn('[dsh-workspace-menu] delete workspace failed', e)
-          flashMessage('删除失败')
+          flashMessage('移除失败')
+        })
+      },
+    })
+  }
+  if (isFeatureEnabled(state, 'workspaceDeleteDisk')) {
+    items.push({
+      id: 'delete-disk',
+      label: '删除工作区（含磁盘）',
+      danger: true,
+      disabled: !ws,
+      onClick: () => {
+        if (!ws) return
+        const first = window.confirm(`确定要删除工作区“${title}”吗？\n这会删除该目录下的所有文件。`)
+        if (!first) return
+        const second = window.confirm(`再次确认：删除工作区“${title}”将永久移除磁盘目录与全部会话记录，且无法恢复。\n确定继续吗？`)
+        if (!second) return
+        const run = async (): Promise<void> => {
+          // 会话记录统一交给 dsh-archive-manager 删除，避免两套逻辑冲突。
+          for (const sessionId of ws.sessionIds) {
+            await permanentDeleteSession(sessionId).catch(() => undefined)
+          }
+          await deleteWorkspaceDirectory(ws.path)
+          await ctx.workspaces.delete(workspaceId)
+          void ctx.workspaces.refresh()
+        }
+        run().then(() => {
+          flashMessage('工作区已删除')
+        }).catch((e) => {
+          console.warn('[dsh-workspace-menu] delete workspace disk failed', e)
+          flashMessage(`删除失败：${e instanceof Error ? e.message : String(e)}`)
         })
       },
     })
@@ -634,6 +710,27 @@ function sessionMenu(ctx: ClientContext, sessionId: string, title: string): Menu
         openInExplorer(session.cwd).catch((e) => {
           console.warn('[dsh-workspace-menu] open session cwd failed', e)
           flashMessage(`打开失败：${e instanceof Error ? e.message : String(e)}`)
+        })
+      },
+    })
+  }
+  if (isFeatureEnabled(state, 'sessionDelete')) {
+    items.push({
+      id: 'delete',
+      label: '删除会话（含磁盘记录）',
+      danger: true,
+      onClick: () => {
+        const first = window.confirm(`确定要删除会话“${title}”吗？\n这会删除该会话的日志记录。`)
+        if (!first) return
+        const second = window.confirm(`再次确认：删除会话“${title}”将永久移除其记录，且无法恢复。\n确定继续吗？`)
+        if (!second) return
+        permanentDeleteSession(sessionId).then(() => {
+          flashMessage('会话已删除')
+          void ctx.sessions.refresh()
+          void ctx.workspaces.refresh()
+        }).catch((e) => {
+          console.warn('[dsh-workspace-menu] delete session failed', e)
+          flashMessage(`删除失败：${e instanceof Error ? e.message : String(e)}`)
         })
       },
     })

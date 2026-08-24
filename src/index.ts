@@ -10,7 +10,9 @@
  */
 import { spawn } from 'node:child_process'
 import { statSync } from 'node:fs'
-import { isAbsolute, join, normalize } from 'node:path'
+import { rm } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { isAbsolute, join, normalize, sep } from 'node:path'
 import type { Context } from 'cordis'
 
 interface HttpRequest {
@@ -45,6 +47,16 @@ type AppContext = Context & {
 
 export const name = '@dsh-external/dsh-workspace-menu'
 export const inject = ['webServer', 'webRuntime']
+
+interface RouteLease {
+  references: number
+  dispose: () => void
+}
+
+// The development hot-reloader can apply the same linked bundle more than
+// once. New DSH WebServer versions reject duplicate exact routes, so route
+// ownership is shared by all plugin instances that use the same server.
+const routeLeases = new WeakMap<WebServer, RouteLease>()
 
 function header(headers: HttpRequest['headers'], name: string): string | undefined {
   const value = headers[name]
@@ -184,31 +196,96 @@ async function openInOs(rawPath: string): Promise<void> {
   throw lastError instanceof Error ? lastError : new Error('no file manager available')
 }
 
-export function apply(ctx: AppContext): void {
-  ctx.effect(() => ctx.webServer.register({
-    kind: 'exact',
-    path: '/dsh-workspace-menu/open-in-explorer',
-    handler: async (req, res) => {
-      if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
-        writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
-        return
-      }
-      if (req.method !== 'POST') {
-        writeJson(res, 405, { ok: false, error: { code: 'method-error', message: 'method not allowed' } })
-        return
-      }
-      try {
-        const body = (await readJsonBody(req)) as { path?: unknown } | null
-        const raw = typeof body?.path === 'string' ? body.path : ''
-        if (!raw || !isAbsolute(raw) || raw.includes('\0')) {
-          writeJson(res, 400, { ok: false, error: { code: 'bad-request', message: 'invalid absolute path' } })
+function isForbiddenDeletePath(path: string): boolean {
+  const normalized = normalize(path)
+  const dshHome = process.env.DSH_HOME ?? join(homedir(), '.dsh')
+  const forbidden = [process.cwd(), homedir(), dshHome, process.env.SystemRoot ?? ''].filter(Boolean)
+  for (const item of forbidden) {
+    const n = normalize(item)
+    if (normalized === n || normalized === n + sep) return true
+  }
+  if (normalized === '/' || normalized === '\\' || /^[a-zA-Z]:[\\/]?$/.test(normalized)) return true
+  return false
+}
+
+function acquireRoutes(ctx: AppContext): () => void {
+  const existing = routeLeases.get(ctx.webServer)
+  if (existing !== undefined) {
+    existing.references += 1
+    return () => releaseRoutes(ctx.webServer, existing)
+  }
+
+  const disposers = [
+    ctx.webServer.register({
+      kind: 'exact',
+      path: '/dsh-workspace-menu/open-in-explorer',
+      handler: async (req, res) => {
+        if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
+          writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
           return
         }
-        await openInOs(raw)
-        writeJson(res, 200, { ok: true })
-      } catch (error) {
-        writeJson(res, 400, { ok: false, error: { code: 'open-failed', message: error instanceof Error ? error.message : String(error) } })
-      }
+        if (req.method !== 'POST') {
+          writeJson(res, 405, { ok: false, error: { code: 'method-error', message: 'method not allowed' } })
+          return
+        }
+        try {
+          const body = (await readJsonBody(req)) as { path?: unknown } | null
+          const raw = typeof body?.path === 'string' ? body.path : ''
+          if (!raw || !isAbsolute(raw) || raw.includes('\0')) {
+            writeJson(res, 400, { ok: false, error: { code: 'bad-request', message: 'invalid absolute path' } })
+            return
+          }
+          await openInOs(raw)
+          writeJson(res, 200, { ok: true })
+        } catch (error) {
+          writeJson(res, 400, { ok: false, error: { code: 'open-failed', message: error instanceof Error ? error.message : String(error) } })
+        }
+      },
+    }),
+    ctx.webServer.register({
+      kind: 'exact',
+      path: '/dsh-workspace-menu/delete-workspace-directory',
+      handler: async (req, res) => {
+        if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
+          writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
+          return
+        }
+        if (req.method !== 'POST') {
+          writeJson(res, 405, { ok: false, error: { code: 'method-error', message: 'method not allowed' } })
+          return
+        }
+        try {
+          const body = (await readJsonBody(req)) as { path?: unknown } | null
+          const raw = typeof body?.path === 'string' ? body.path : ''
+          if (!raw || !isAbsolute(raw) || raw.includes('\0') || isForbiddenDeletePath(raw)) {
+            writeJson(res, 400, { ok: false, error: { code: 'bad-request', message: 'invalid or protected directory' } })
+            return
+          }
+          await rm(normalize(raw), { recursive: true, force: true })
+          writeJson(res, 200, { ok: true })
+        } catch (error) {
+          writeJson(res, 400, { ok: false, error: { code: 'delete-failed', message: error instanceof Error ? error.message : String(error) } })
+        }
+      },
+    }),
+  ]
+  const lease: RouteLease = {
+    references: 1,
+    dispose: () => {
+      for (const dispose of disposers) dispose()
     },
-  }), '@dsh-external/dsh-workspace-menu: open-in-explorer route')
+  }
+  routeLeases.set(ctx.webServer, lease)
+  return () => releaseRoutes(ctx.webServer, lease)
+}
+
+function releaseRoutes(webServer: WebServer, lease: RouteLease): void {
+  lease.references -= 1
+  if (lease.references !== 0 || routeLeases.get(webServer) !== lease) return
+  routeLeases.delete(webServer)
+  lease.dispose()
+}
+
+export function apply(ctx: AppContext): void {
+  ctx.effect(() => acquireRoutes(ctx), '@dsh-external/dsh-workspace-menu: host routes')
 }

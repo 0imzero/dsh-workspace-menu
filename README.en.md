@@ -4,11 +4,12 @@ A workspace and chat management menu for the DSH home page. Double-click or righ
 
 ## Highlights
 
-- **Workspace actions**: pin, rename, open in file explorer, copy path, new session, delete workspace
-- **Chat actions**: pin, rename, mark unread/read, archive, fork, copy session link, copy session title, open in new window, open containing folder
+- **Workspace actions**: pin, rename, open in file explorer, copy path, new session, remove from list, delete workspace (including disk)
+- **Chat actions**: pin, rename, mark unread/read, archive, fork, copy session link, copy session title, open in new window, open containing folder, delete session (including disk records)
 - **Cross-platform**: Windows Explorer, macOS Finder, and Linux with `xdg-open` / `gio` / common file managers
 - **Settings integrated**: feature toggles live in the DSH General settings, are collapsible, and can be enabled individually
 - **No built-in source changes**: rows are located via DOM events and React fiber; DSH built-in code is untouched
+- **Archive-manager friendly**: permanent session deletion reuses `@mlgbnb/dsh-archive-manager`; this plugin only removes the workspace directory
 
 ## Features
 
@@ -19,7 +20,8 @@ Project row (double-click or right-click):
 - Open in file explorer
 - Copy path
 - New session
-- Delete workspace
+- Remove from workspace list (keeps disk)
+- Delete workspace (including disk, double confirmation)
 
 Chat row (double-click or right-click):
 
@@ -32,6 +34,7 @@ Chat row (double-click or right-click):
 - Copy session title
 - Open in new window
 - Open containing folder
+- Delete session (including disk records, double confirmation)
 
 Settings are integrated into the DSH General settings page; each feature can be enabled or disabled individually.
 
@@ -40,14 +43,14 @@ Settings are integrated into the DSH General settings page; each feature can be 
 Download the tgz from Releases and run:
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-1.1.0.tgz
+dsh plugin --profile web add dsh-external-dsh-workspace-menu-1.2.0.tgz
 ```
 
 Build locally:
 
 ```bash
 npm install
-npm run build:client
+npm run build
 ```
 
 ## Notes
@@ -56,3 +59,4 @@ npm run build:client
 - Pin and unread state is stored in browser localStorage.
 - Opening in a new window uses the `?session=<id>` deep link.
 - The settings item is located in DSH Settings → General and can be collapsed or expanded.
+- "Delete session (including disk records)" and "Delete workspace (including disk)" require `@mlgbnb/dsh-archive-manager`; session records are deleted by it, and this plugin only removes the workspace directory.

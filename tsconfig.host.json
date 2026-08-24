@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/index.ts", "src/cordis.d.ts"],
+  "exclude": ["src/client"]
+}

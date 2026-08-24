@@ -2,18 +2,30 @@
 
 ## Host half
 
-`src/index.ts` registers one exact route:
+`src/index.ts` registers routes through a shared `WeakMap<WebServer, RouteLease>`
+so hot-reload or duplicate loader applications never register the same exact
+route twice.
+
+Routes:
 
 ```
 POST /dsh-workspace-menu/open-in-explorer
+POST /dsh-workspace-menu/delete-workspace-directory
 ```
 
-The route is guarded by the same loopback/trusted-host fence used by DSH API
-routes. It receives an absolute path, then launches the platform file manager:
+`open-in-explorer` is guarded by the same loopback/trusted-host fence used by
+DSH API routes. It receives an absolute path, then launches the platform file
+manager:
 
 - Windows: `explorer.exe`
 - macOS: `open`
 - Linux: `xdg-open`, then `gio`, `nautilus`, `dolphin`, `thunar`, `pcmanfm`
+
+`delete-workspace-directory` only removes a project directory after the client
+has already asked `@mlgbnb/dsh-archive-manager` to delete the workspace's
+session records. It refuses to delete protected paths (home, DSH home, drive
+roots, cwd). Session data deletion itself is intentionally delegated to
+`dsh-archive-manager` to avoid conflicting with its workspace/projcache writes.
 
 ## Client half
 
