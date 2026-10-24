@@ -17,12 +17,12 @@ interface WebServer {
         handler: (req: HttpRequest, res: HttpResponse) => void | Promise<void>;
     }): () => void;
 }
-interface WebRuntime {
-    trustedHosts: readonly string[];
+interface Connection {
+    isTrusted(req: HttpRequest): boolean;
 }
 type AppContext = Context & {
     webServer: WebServer;
-    webRuntime: WebRuntime;
+    connection: Connection;
 };
 export declare const name = "@dsh-external/dsh-workspace-menu";
 export declare const inject: string[];

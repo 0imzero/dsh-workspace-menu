@@ -36,17 +36,17 @@ interface WebServer {
   }): () => void
 }
 
-interface WebRuntime {
-  trustedHosts: readonly string[]
+interface Connection {
+  isTrusted(req: HttpRequest): boolean
 }
 
 type AppContext = Context & {
   webServer: WebServer
-  webRuntime: WebRuntime
+  connection: Connection
 }
 
 export const name = '@dsh-external/dsh-workspace-menu'
-export const inject = ['webServer', 'webRuntime']
+export const inject = ['webServer', 'connection']
 
 interface RouteLease {
   references: number
@@ -57,58 +57,6 @@ interface RouteLease {
 // once. New DSH WebServer versions reject duplicate exact routes, so route
 // ownership is shared by all plugin instances that use the same server.
 const routeLeases = new WeakMap<WebServer, RouteLease>()
-
-function header(headers: HttpRequest['headers'], name: string): string | undefined {
-  const value = headers[name]
-  return typeof value === 'string' ? value : undefined
-}
-
-function parseAuthority(authority: string): URL | undefined {
-  try {
-    return new URL(`http://${authority}`)
-  } catch {
-    return undefined
-  }
-}
-
-function isLoopbackHostname(hostname: string): boolean {
-  if (hostname === 'localhost' || hostname === '[::1]') return true
-  const parts = hostname.split('.')
-  return parts.length === 4
-    && parts[0] === '127'
-    && parts.every(part => /^\d{1,3}$/.test(part) && Number(part) <= 255)
-}
-
-function canonicalAuthority(entry: string, entryUrl: URL): string {
-  const port = entryUrl.port !== '' ? entryUrl.port : new URL(`https://${entry}`).port
-  return port === '' ? entryUrl.hostname : `${entryUrl.hostname}:${port}`
-}
-
-function isTrustedAuthority(hostUrl: URL, trustedHosts: readonly string[]): boolean {
-  return trustedHosts.some((entry) => {
-    const entryUrl = parseAuthority(entry)
-    if (entryUrl === undefined) return false
-    return canonicalAuthority(entry, entryUrl) === entryUrl.hostname
-      ? entryUrl.hostname === hostUrl.hostname
-      : entryUrl.host === hostUrl.host
-  })
-}
-
-function isTrustedApiRequest(req: HttpRequest, trustedHosts: readonly string[]): boolean {
-  const host = header(req.headers, 'host')
-  if (host === undefined) return false
-  const hostUrl = parseAuthority(host)
-  if (hostUrl === undefined) return false
-  if (!isLoopbackHostname(hostUrl.hostname) && !isTrustedAuthority(hostUrl, trustedHosts)) return false
-  if (header(req.headers, 'sec-fetch-site') === 'cross-site') return false
-  const origin = header(req.headers, 'origin')
-  if (origin === undefined) return true
-  try {
-    return new URL(origin).host === hostUrl.host
-  } catch {
-    return false
-  }
-}
 
 async function readJsonBody(req: HttpRequest): Promise<unknown> {
   const chunks: Buffer[] = []
@@ -220,7 +168,7 @@ function acquireRoutes(ctx: AppContext): () => void {
       kind: 'exact',
       path: '/dsh-workspace-menu/open-in-explorer',
       handler: async (req, res) => {
-        if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
+        if (!ctx.connection.isTrusted(req)) {
           writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
           return
         }
@@ -246,7 +194,7 @@ function acquireRoutes(ctx: AppContext): () => void {
       kind: 'exact',
       path: '/dsh-workspace-menu/delete-workspace-directory',
       handler: async (req, res) => {
-        if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
+        if (!ctx.connection.isTrusted(req)) {
           writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
           return
         }

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Use the host connection service for trusted-request checks. DSH removed the
+  webRuntime service, so inject = ['webServer', 'webRuntime'] left the plugin
+  pending forever (`waiting for service: webRuntime`) on 0.2.1; both host routes
+  now call ctx.connection.isTrusted(req) and the duplicated host/origin check is
+  gone.
+
 ## 1.2.0
 
 - Add host route lease (`WeakMap` reference counting) so duplicate loader
