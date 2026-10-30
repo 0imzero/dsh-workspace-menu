@@ -1,7 +1,7 @@
 {
   "name": "@dsh-external/dsh-workspace-menu",
-  "version": "1.2.0",
-  "description": "DSH 主页工作区/会话右键与双击增强菜单：置顶、重命名、资源管理器打开、归档、分叉、复制、新窗口等",
+  "version": "2.0.0",
+  "description": "DSH 主页工作区/会话右键与双击增强菜单：置顶、重命名、资源管理器打开、归档、分叉、复制、新窗口等（DSH 0.2.x 适配版）",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",
@@ -15,22 +15,21 @@
   ],
   "license": "BSD-3-Clause",
   "peerDependencies": {
-    "@deepseek-ai/dsh-client-runtime": ">=0.0.1-rc <2",
-    "@deepseek-ai/dsh-client-ui-settings": ">=0.0.1-rc <2",
-    "@deepseek-ai/dsh-client-ui-slots": ">=0.0.1-rc <2",
     "cordis": ">=4.0.0-rc <5",
     "react": "^18.2.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "typescript": "^5.9.0",
-    "tsdown": "^0.22.14"
+    "@types/react": "^18.3.31",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.9.0"
   },
   "scripts": {
-    "build": "bash scripts/build.sh",
+    "build": "npm run build:host && npm run build:types && npm run build:client && node scripts/check.mjs",
     "build:host": "tsc -p tsconfig.host.json",
+    "build:types": "tsc -p tsconfig.client.types.json",
     "build:client": "tsdown",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.host.json --noEmit && tsc -p tsconfig.client.json",
     "check": "node scripts/check.mjs"
   },
   "exports": {
@@ -45,13 +44,18 @@
     "./package.json": "./package.json"
   },
   "dsh": {
+    "engines": {
+      "dsh": ">=0.2.1-rc.3"
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-ui-slots"
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-locale"
       ],
       "platform": "web"
     }

@@ -1,15 +1,22 @@
 /**
- * @dsh-external/dsh-workspace-menu — host half.
+ * @dsh-external/dsh-workspace-menu — host half (DSH 0.2.x).
  *
  * 提供真正的“在系统文件管理器中打开”能力：浏览器端请求本路由，
  * Host 按平台调用对应文件管理器：
  * - Windows：explorer.exe
  * - macOS：open（Finder）
  * - Linux：xdg-open / gio / nautilus / dolphin / thunar / pcmanfm 依次回退
+ *
+ * 另外提供两个受保护的管理路由：
+ * - `/dsh-workspace-menu/delete-workspace-directory`：删除工作区目录
+ * - `/dsh-workspace-menu/delete-session`：删除宿主的会话记录目录
+ *
  * 路由带 Host/Origin 信任围栏，防止跨站滥用。
+ *
+ * 0.2.x 适配：`webRuntime` 服务已更名为 `webStartup`（DSH 0.2.1-rc.5）。
  */
 import { spawn } from 'node:child_process'
-import { statSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { isAbsolute, join, normalize, sep } from 'node:path'
@@ -36,17 +43,17 @@ interface WebServer {
   }): () => void
 }
 
-interface WebRuntime {
+interface WebStartup {
   trustedHosts: readonly string[]
 }
 
 type AppContext = Context & {
   webServer: WebServer
-  webRuntime: WebRuntime
+  webStartup: WebStartup
 }
 
 export const name = '@dsh-external/dsh-workspace-menu'
-export const inject = ['webServer', 'webRuntime']
+export const inject = ['webServer', 'webStartup']
 
 interface RouteLease {
   references: number
@@ -56,7 +63,10 @@ interface RouteLease {
 // The development hot-reloader can apply the same linked bundle more than
 // once. New DSH WebServer versions reject duplicate exact routes, so route
 // ownership is shared by all plugin instances that use the same server.
-const routeLeases = new WeakMap<WebServer, RouteLease>()
+// The lease is keyed by the ROOT context: `ctx.webServer` is a per-scope
+// service proxy, so keying by it made a second mount miss the lease and
+// register the same exact route twice.
+const routeLeases = new WeakMap<object, RouteLease>()
 
 function header(headers: HttpRequest['headers'], name: string): string | undefined {
   const value = headers[name]
@@ -156,7 +166,7 @@ function spawnOpener(cmd: string, args: string[]): Promise<void> {
       if (settled) return
       settled = true
       if (code === 0 || code === null) resolve()
-      else reject(new Error(`opener exited with code ${code}`))
+      else reject(new Error(`opener exited with code ${String(code)}`))
     })
   })
 }
@@ -196,10 +206,14 @@ async function openInOs(rawPath: string): Promise<void> {
   throw lastError instanceof Error ? lastError : new Error('no file manager available')
 }
 
+function dshHome(): string {
+  return process.env.DSH_HOME ?? join(homedir(), '.dsh')
+}
+
 function isForbiddenDeletePath(path: string): boolean {
   const normalized = normalize(path)
-  const dshHome = process.env.DSH_HOME ?? join(homedir(), '.dsh')
-  const forbidden = [process.cwd(), homedir(), dshHome, process.env.SystemRoot ?? ''].filter(Boolean)
+  const home = dshHome()
+  const forbidden = [process.cwd(), homedir(), home, process.env.SystemRoot ?? ''].filter(Boolean)
   for (const item of forbidden) {
     const n = normalize(item)
     if (normalized === n || normalized === n + sep) return true
@@ -208,11 +222,49 @@ function isForbiddenDeletePath(path: string): boolean {
   return false
 }
 
+/**
+ * Locate the Host's on-disk record of one Session.
+ *
+ * DSH keeps one directory per Session under
+ * `$DSH_HOME/sessions/<workspace-slug>/<sessionId>/`, and the directory name
+ * is the Session identity. The search stays inside the sessions root and
+ * only ever matches a directory whose name equals the requested identity.
+ */
+function findSessionRecord(sessionId: string): string | undefined {
+  if (!/^[A-Za-z0-9._-]{1,128}$/.test(sessionId)) return undefined
+  const root = join(dshHome(), 'sessions')
+  let entries: string[]
+  try {
+    entries = readdirSync(root)
+  } catch {
+    return undefined
+  }
+  for (const entry of entries) {
+    const candidate = join(root, entry, sessionId)
+    try {
+      if (existsSync(candidate) && statSync(candidate).isDirectory()) return candidate
+    } catch {
+      // unreadable bucket — keep looking
+    }
+  }
+  return undefined
+}
+
+async function deleteSessionRecord(sessionId: string): Promise<void> {
+  const record = findSessionRecord(sessionId)
+  if (record === undefined) {
+    // Nothing on disk to remove (the Session may never have written a log).
+    return
+  }
+  await rm(record, { recursive: true, force: true })
+}
+
 function acquireRoutes(ctx: AppContext): () => void {
-  const existing = routeLeases.get(ctx.webServer)
+  const key = (ctx as { root?: object }).root ?? ctx
+  const existing = routeLeases.get(key)
   if (existing !== undefined) {
     existing.references += 1
-    return () => releaseRoutes(ctx.webServer, existing)
+    return () => releaseRoutes(key, existing)
   }
 
   const disposers = [
@@ -220,7 +272,7 @@ function acquireRoutes(ctx: AppContext): () => void {
       kind: 'exact',
       path: '/dsh-workspace-menu/open-in-explorer',
       handler: async (req, res) => {
-        if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
+        if (!isTrustedApiRequest(req, ctx.webStartup.trustedHosts)) {
           writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
           return
         }
@@ -246,7 +298,7 @@ function acquireRoutes(ctx: AppContext): () => void {
       kind: 'exact',
       path: '/dsh-workspace-menu/delete-workspace-directory',
       handler: async (req, res) => {
-        if (!isTrustedApiRequest(req, ctx.webRuntime.trustedHosts)) {
+        if (!isTrustedApiRequest(req, ctx.webStartup.trustedHosts)) {
           writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
           return
         }
@@ -268,6 +320,32 @@ function acquireRoutes(ctx: AppContext): () => void {
         }
       },
     }),
+    ctx.webServer.register({
+      kind: 'exact',
+      path: '/dsh-workspace-menu/delete-session',
+      handler: async (req, res) => {
+        if (!isTrustedApiRequest(req, ctx.webStartup.trustedHosts)) {
+          writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } })
+          return
+        }
+        if (req.method !== 'POST') {
+          writeJson(res, 405, { ok: false, error: { code: 'method-error', message: 'method not allowed' } })
+          return
+        }
+        try {
+          const body = (await readJsonBody(req)) as { sessionId?: unknown } | null
+          const raw = typeof body?.sessionId === 'string' ? body.sessionId : ''
+          if (!raw || !/^[A-Za-z0-9._-]{1,128}$/.test(raw)) {
+            writeJson(res, 400, { ok: false, error: { code: 'bad-request', message: 'invalid session id' } })
+            return
+          }
+          await deleteSessionRecord(raw)
+          writeJson(res, 200, { ok: true })
+        } catch (error) {
+          writeJson(res, 400, { ok: false, error: { code: 'delete-failed', message: error instanceof Error ? error.message : String(error) } })
+        }
+      },
+    }),
   ]
   const lease: RouteLease = {
     references: 1,
@@ -275,14 +353,14 @@ function acquireRoutes(ctx: AppContext): () => void {
       for (const dispose of disposers) dispose()
     },
   }
-  routeLeases.set(ctx.webServer, lease)
-  return () => releaseRoutes(ctx.webServer, lease)
+  routeLeases.set(key, lease)
+  return () => releaseRoutes(key, lease)
 }
 
-function releaseRoutes(webServer: WebServer, lease: RouteLease): void {
+function releaseRoutes(key: object, lease: RouteLease): void {
   lease.references -= 1
-  if (lease.references !== 0 || routeLeases.get(webServer) !== lease) return
-  routeLeases.delete(webServer)
+  if (lease.references !== 0 || routeLeases.get(key) !== lease) return
+  routeLeases.delete(key)
   lease.dispose()
 }
 

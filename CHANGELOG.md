@@ -1,5 +1,50 @@
 # Changelog
 
+## 2.0.0 — DSH 0.2.x adaptation
+
+Breaking: this release targets DSH 0.2.x only (`dsh >= 0.2.1-rc.3`).
+
+- **Fix the settings entry disappearing.** The 0.1.x build imported
+  `IconChevronDownOutline14` from `@deepseek-ai/dsh-client-ui-primitives`;
+  DSH 0.2.x renamed that icon to `IconChevronDownOutlineMedium` /
+  `IconChevronDownOutlineRegular`. The missing export made the settings
+  component throw while rendering, and the slot runtime silently abdicated
+  the entry — the plugin looked installed but had no settings row at all.
+  The settings UI now draws its own chevron and depends on no icon export.
+- **Move the settings out of the General row into their own page.** DSH 0.2.x
+  documents `settings.general.item` as the seat for a *single* setting that
+  needs no page of its own, and `settings.section` as the seat for a page.
+  The plugin registers a `settings.section` entry (`dsh-workspace-menu`).
+- **Own a locale namespace.** The plugin registers `zh` / `en` dictionaries
+  and renders its page title, menu labels and dialogs through `ctx.locale`,
+  so they follow the active UI language.
+- **Navigate through the view owner.** `ctx.sessions.open()` and
+  `ctx.workspaces.startSession()` were removed in 0.2.x; the plugin now uses
+  `ctx.uiWorkspace.openSession()` / `startSession()` / `forkSession()`.
+- **Host-authoritative session pinning.** The pin set moved to the Workspace
+  Controller (`pinnedSessionIds` + `uiWorkspace.pinSession` / `unpinSession`),
+  so the plugin's pin now agrees with DSH's built-in "pin session" button.
+  Workspace pinning stays local because 0.2.x has no workspace-level pin.
+- **New action: unarchive.** DSH 0.2.x exposes the archive set and
+  `unarchiveSession()`, so the session menu offers "unarchive" for sessions
+  that are currently archived.
+- **Self-contained permanent deletion.** The plugin used to delegate session
+  log deletion to `@mlgbnb/dsh-archive-manager`, which is not part of a
+  stock installation. It now owns `POST /dsh-workspace-menu/delete-session`,
+  which removes `$DSH_HOME/sessions/<bucket>/<sessionId>/` and nothing else.
+- **Host API fixes.** `webRuntime` is gone in 0.2.x; the host half now
+  injects `webStartup` and reads `ctx.webStartup.trustedHosts`.
+- **Route lease fix.** The lease was keyed by `ctx.webServer`, a per-scope
+  service proxy, so a second mount of the same bundle missed the lease and
+  registered the same exact route twice (`duplicate exact route`). It is now
+  keyed by the root context.
+- **Drop the removed client packages.** `@deepseek-ai/dsh-client-runtime` and
+  `@deepseek-ai/dsh-client-ui-primitives` no longer exist in 0.2.x; the client
+  half declares the small slice of the 0.2.x contract it uses locally, so the
+  package builds without a DSH checkout and without version-coupling to
+  unpublished client packages.
+- Drop `ctx.workspaces.refresh()` (0.2.x projects the list live).
+
 ## 1.2.0
 
 - Add host route lease (`WeakMap` reference counting) so duplicate loader

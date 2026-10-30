@@ -1,15 +1,18 @@
 # dsh-workspace-menu
 
-A workspace and chat management menu for the DSH home page. Double-click or right-click a workspace or chat to pin, rename, open in the file manager, archive, fork, copy, or open in a new window. Every feature can be toggled from the DSH General settings.
+A workspace and chat management menu for the DSH home page. Double-click or right-click a workspace or chat to pin, rename, open in the file manager, archive, fork, copy, or open in a new window. Every feature can be toggled from the plugin's own page in the DSH settings panel.
+
+> **v2.0.0 and later require DSH 0.2.x** (`dsh >= 0.2.1-rc.3`). Use v1.2.x for 0.1.x.
 
 ## Highlights
 
 - **Workspace actions**: pin, rename, open in file explorer, copy path, new session, remove from list, delete workspace (including disk)
-- **Chat actions**: pin, rename, mark unread/read, archive, fork, copy session link, copy session title, open in new window, open containing folder, delete session (including disk records)
+- **Chat actions**: pin, rename, mark unread/read, archive, unarchive, fork, copy session link, copy session title, open in new window, open containing folder, delete session (including disk records)
+- **Host-authoritative session pinning**: shares the pin set with DSH's built-in "pin session" button, so it survives reloads, browsers and devices
 - **Cross-platform**: Windows Explorer, macOS Finder, and Linux with `xdg-open` / `gio` / common file managers
-- **Settings integrated**: feature toggles live in the DSH General settings, are collapsible, and can be enabled individually
+- **Settings as its own page**: Settings → Workspace menu, 20 individual toggles, English and Chinese
 - **No built-in source changes**: rows are located via DOM events and React fiber; DSH built-in code is untouched
-- **Archive-manager friendly**: permanent session deletion reuses `@mlgbnb/dsh-archive-manager`; this plugin only removes the workspace directory
+- **Self-contained deletion**: session records and the workspace directory are removed by this plugin's own host routes
 
 ## Features
 
@@ -29,6 +32,7 @@ Chat row (double-click or right-click):
 - Rename
 - Mark unread / read
 - Archive session
+- Unarchive session (shown when the session is in the archive set)
 - Fork session
 - Copy session link
 - Copy session title
@@ -36,14 +40,14 @@ Chat row (double-click or right-click):
 - Open containing folder
 - Delete session (including disk records, double confirmation)
 
-Settings are integrated into the DSH General settings page; each feature can be enabled or disabled individually.
+Settings live on their own page: **Settings → Workspace menu**, with every feature toggleable individually.
 
 ## Install
 
 Download the tgz from Releases and run:
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-1.2.0.tgz
+dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.0.tgz
 ```
 
 Build locally:
@@ -56,7 +60,8 @@ npm run build
 ## Notes
 
 - "Open in file explorer" calls the host to launch the system file manager: Windows Explorer on Windows, Finder on macOS, and `xdg-open` / `gio` / common file managers on Linux.
-- Pin and unread state is stored in browser localStorage.
-- Opening in a new window uses the `?session=<id>` deep link.
-- The settings item is located in DSH Settings → General and can be collapsed or expanded.
-- "Delete session (including disk records)" and "Delete workspace (including disk)" require `@mlgbnb/dsh-archive-manager`; session records are deleted by it, and this plugin only removes the workspace directory.
+- **Workspace** pinning and the unread marker are stored in browser localStorage; **session** pinning is owned by the Host (a 0.2.x built-in) and is no longer kept locally.
+- Opening in a new window uses the `?session=<id>` deep link; DSH 0.2.x has no URL routing of its own, so the plugin owns it.
+- The settings page is at DSH Settings → Workspace menu.
+- "Delete session (including disk records)" and "Delete workspace (including disk)" are handled by this plugin's own host routes; `@mlgbnb/dsh-archive-manager` is no longer required.
+- Session records live in `$DSH_HOME/sessions/<workspace-slug>/<sessionId>/`; a delete only ever matches the directory whose name equals the requested session id.

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "react"],
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationDir": "lib/types",
+    "rootDir": "src"
+  },
+  "include": ["src/client", "src/cordis.d.ts"]
+}
