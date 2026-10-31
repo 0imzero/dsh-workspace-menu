@@ -47,7 +47,7 @@ Chat 行（双击或右键）：
 从 Releases 下载 tgz，然后：
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.0.tgz
+dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.1.tgz
 ```
 
 本地开发：

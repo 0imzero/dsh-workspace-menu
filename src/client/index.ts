@@ -557,7 +557,7 @@ function workspaceMenu(ctx: ClientContext, workspaceId: string, title: string): 
         if (!second) return
         const run = async (): Promise<void> => {
           for (const sessionId of ws.sessionIds) {
-            await deleteSessionRecord(sessionId).catch(() => undefined)
+            await deleteSessionRecord(sessionId)
           }
           await deleteWorkspaceDirectory(ws.path)
           await ctx.workspaces.delete(workspaceId)

@@ -19,7 +19,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { isAbsolute, join, normalize, sep } from 'node:path'
+import { isAbsolute, join, normalize, resolve, sep } from 'node:path'
 import type { Context } from 'cordis'
 
 interface HttpRequest {
@@ -211,12 +211,16 @@ function dshHome(): string {
 }
 
 function isForbiddenDeletePath(path: string): boolean {
-  const normalized = normalize(path)
+  const canonical = (value: string): string => {
+    const result = resolve(value).replace(/[\\/]+$/, '')
+    return process.platform === 'win32' ? result.toLowerCase() : result
+  }
+  const normalized = canonical(path)
   const home = dshHome()
   const forbidden = [process.cwd(), homedir(), home, process.env.SystemRoot ?? ''].filter(Boolean)
   for (const item of forbidden) {
-    const n = normalize(item)
-    if (normalized === n || normalized === n + sep) return true
+    const n = canonical(item)
+    if (normalized === n || n.startsWith(normalized + sep)) return true
   }
   if (normalized === '/' || normalized === '\\' || /^[a-zA-Z]:[\\/]?$/.test(normalized)) return true
   return false
@@ -231,16 +235,17 @@ function isForbiddenDeletePath(path: string): boolean {
  * only ever matches a directory whose name equals the requested identity.
  */
 function findSessionRecord(sessionId: string): string | undefined {
-  if (!/^[A-Za-z0-9._-]{1,128}$/.test(sessionId)) return undefined
+  if (!isValidSessionId(sessionId)) return undefined
   const root = join(dshHome(), 'sessions')
-  let entries: string[]
+  let entries: import('node:fs').Dirent[]
   try {
-    entries = readdirSync(root)
+    entries = readdirSync(root, { withFileTypes: true })
   } catch {
     return undefined
   }
   for (const entry of entries) {
-    const candidate = join(root, entry, sessionId)
+    if (!entry.isDirectory()) continue
+    const candidate = join(root, entry.name, sessionId)
     try {
       if (existsSync(candidate) && statSync(candidate).isDirectory()) return candidate
     } catch {
@@ -248,6 +253,10 @@ function findSessionRecord(sessionId: string): string | undefined {
     }
   }
   return undefined
+}
+
+function isValidSessionId(id: string): boolean {
+  return id !== '.' && id !== '..' && /^[A-Za-z0-9._-]{1,128}$/.test(id)
 }
 
 async function deleteSessionRecord(sessionId: string): Promise<void> {
@@ -335,7 +344,7 @@ function acquireRoutes(ctx: AppContext): () => void {
         try {
           const body = (await readJsonBody(req)) as { sessionId?: unknown } | null
           const raw = typeof body?.sessionId === 'string' ? body.sessionId : ''
-          if (!raw || !/^[A-Za-z0-9._-]{1,128}$/.test(raw)) {
+          if (!isValidSessionId(raw)) {
             writeJson(res, 400, { ok: false, error: { code: 'bad-request', message: 'invalid session id' } })
             return
           }

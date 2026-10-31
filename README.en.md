@@ -47,7 +47,7 @@ Settings live on their own page: **Settings → Workspace menu**, with every fea
 Download the tgz from Releases and run:
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.0.tgz
+dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.1.tgz
 ```
 
 Build locally:

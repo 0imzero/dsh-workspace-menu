@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+- Reject `.` and `..` as session IDs and skip linked session buckets when deleting records.
+- Protect parent directories of the DSH home, user home, current directory, and system directory from workspace deletion, including case variations on Windows.
+- Stop workspace deletion if a session record cannot be removed, instead of silently continuing.
+
 ## 2.0.0 — DSH 0.2.x adaptation
 
 Breaking: this release targets DSH 0.2.x only (`dsh >= 0.2.1-rc.3`).
