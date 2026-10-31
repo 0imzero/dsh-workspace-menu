@@ -1,67 +1,52 @@
-# dsh-workspace-menu
+# DSH Workspace Menu
 
-A workspace and chat management menu for the DSH home page. Double-click or right-click a workspace or chat to pin, rename, open in the file manager, archive, fork, copy, or open in a new window. Every feature can be toggled from the plugin's own page in the DSH settings panel.
+[简体中文](README.md) · **English**
 
-> **v2.0.0 and later require DSH 0.2.x** (`dsh >= 0.2.1-rc.3`). Use v1.2.x for 0.1.x.
+Add a context menu to workspaces and chats on the DSH home page. Right-click or double-click a row to rename it, copy a path, archive a chat, and more.
 
-## Highlights
+> **Compatibility:** v2.0.0 and later support DSH 0.2.x (`>= 0.2.1-rc.3`). For DSH 0.1.x, use [v1.2.0](https://github.com/0imzero/dsh-workspace-menu/releases/tag/v1.2.0).
 
-- **Workspace actions**: pin, rename, open in file explorer, copy path, new session, remove from list, delete workspace (including disk)
-- **Chat actions**: pin, rename, mark unread/read, archive, unarchive, fork, copy session link, copy session title, open in new window, open containing folder, delete session (including disk records)
-- **Host-authoritative session pinning**: shares the pin set with DSH's built-in "pin session" button, so it survives reloads, browsers and devices
-- **Cross-platform**: Windows Explorer, macOS Finder, and Linux with `xdg-open` / `gio` / common file managers
-- **Settings as its own page**: Settings → Workspace menu, 20 individual toggles, English and Chinese
-- **No built-in source changes**: rows are located via DOM events and React fiber; DSH built-in code is untouched
-- **Self-contained deletion**: session records and the workspace directory are removed by this plugin's own host routes
+## Installation
 
-## Features
-
-Project row (double-click or right-click):
-
-- Pin / unpin
-- Rename
-- Open in file explorer
-- Copy path
-- New session
-- Remove from workspace list (keeps disk)
-- Delete workspace (including disk, double confirmation)
-
-Chat row (double-click or right-click):
-
-- Pin / unpin
-- Rename
-- Mark unread / read
-- Archive session
-- Unarchive session (shown when the session is in the archive set)
-- Fork session
-- Copy session link
-- Copy session title
-- Open in new window
-- Open containing folder
-- Delete session (including disk records, double confirmation)
-
-Settings live on their own page: **Settings → Workspace menu**, with every feature toggleable individually.
-
-## Install
-
-Download the tgz from Releases and run:
+Download the package from [Releases](https://github.com/0imzero/dsh-workspace-menu/releases/latest), then run this command from the download directory:
 
 ```bash
 dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.1.tgz
 ```
 
-Build locally:
+Restart DSH, then right-click or double-click a workspace or chat on the home page. You can turn individual actions on or off under **Settings → Workspace menu**. The settings page is available in English and Chinese.
+
+## What you can do
+
+**Workspaces**
+
+- Pin or unpin, and rename
+- Open in the file manager, copy the path, or start a new chat
+- Remove from the list while keeping files, or delete the workspace and its directory after a second confirmation
+
+**Chats**
+
+- Pin or unpin, rename, and mark as read or unread
+- Archive, unarchive, and fork
+- Copy the chat link or title, open in a new window, or open the containing folder
+- Delete the chat and its disk records after a second confirmation
+
+## Notes
+
+- Chat pins share the state used by DSH's built-in pin button. Workspace pins and unread markers are stored in the current browser's localStorage.
+- The file manager action uses Windows Explorer, macOS Finder, or an available Linux program such as `xdg-open` or `gio`.
+- Opening a chat in a new window uses the plugin's `?session=<id>` link.
+- Permanent deletion is handled by the plugin's host routes; `@mlgbnb/dsh-archive-manager` is not required. Session records live under `$DSH_HOME/sessions/<workspace-slug>/<sessionId>/`.
+- The plugin locates workspace and chat rows through DOM events and React fiber, without modifying DSH's built-in source.
+
+## Local development
 
 ```bash
 npm install
 npm run build
+npm test
 ```
 
-## Notes
+## License
 
-- "Open in file explorer" calls the host to launch the system file manager: Windows Explorer on Windows, Finder on macOS, and `xdg-open` / `gio` / common file managers on Linux.
-- **Workspace** pinning and the unread marker are stored in browser localStorage; **session** pinning is owned by the Host (a 0.2.x built-in) and is no longer kept locally.
-- Opening in a new window uses the `?session=<id>` deep link; DSH 0.2.x has no URL routing of its own, so the plugin owns it.
-- The settings page is at DSH Settings → Workspace menu.
-- "Delete session (including disk records)" and "Delete workspace (including disk)" are handled by this plugin's own host routes; `@mlgbnb/dsh-archive-manager` is no longer required.
-- Session records live in `$DSH_HOME/sessions/<workspace-slug>/<sessionId>/`; a delete only ever matches the directory whose name equals the requested session id.
+[BSD 3-Clause](LICENSE)
