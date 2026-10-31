@@ -8,7 +8,7 @@
 
 ## 安装
 
-通过 npm 安装：
+通过 npm 安装（2.0.2 正在 npm 处理，正式版本可见后使用）：
 
 ```bash
 dsh plugin --profile web add @0imzero/dsh-workspace-menu
