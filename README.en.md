@@ -8,7 +8,7 @@ Add a context menu to workspaces and chats on the DSH home page. Right-click or 
 
 ## Installation
 
-Install from npm once version 2.0.2 is available (the release is being processed):
+Install from npm:
 
 ```bash
 dsh plugin --profile web add @0imzero/dsh-workspace-menu
