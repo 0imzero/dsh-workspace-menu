@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3
+
+- Match the DSH Web font and font-size settings in menus, rename dialogs, notifications, and the plugin settings page.
+
 ## 2.0.2
 
 - Leave the current chat before deleting it, so its row can disappear without a manual page refresh.

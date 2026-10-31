@@ -770,7 +770,9 @@ function injectStyles(): () => void {
       border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.5));
       border-radius: 10px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 1px rgba(255, 255, 255, 0.2);
-      font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: inherit;
+      font-size: var(--dsh-content-font-size-secondary, 13px);
+      line-height: 1.4;
       color: var(--dsw-alias-label-primary, #1a1a1a);
       user-select: none;
     }
@@ -813,12 +815,14 @@ function injectStyles(): () => void {
       border-radius: 10px;
       background: var(--dsw-alias-bg-layer-3, #ffffff);
       color: var(--dsw-alias-label-primary, #1a1a1a);
-      font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: inherit;
+      font-size: var(--dsh-content-font-size-secondary, 13px);
+      line-height: 1.5;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
     }
     .${MODAL_CLASS} h3 {
       margin: 0 0 10px;
-      font-size: 14px;
+      font-size: 1.077em;
       font-weight: 600;
     }
     .${MODAL_CLASS} input {
@@ -834,7 +838,7 @@ function injectStyles(): () => void {
     .${MODAL_CLASS}-error {
       margin-top: 6px;
       color: #d33;
-      font-size: 12px;
+      font-size: .923em;
     }
     .${MODAL_CLASS}-footer {
       display: flex;
@@ -866,7 +870,9 @@ function injectStyles(): () => void {
       border-radius: 8px;
       background: rgba(0, 0, 0, 0.78);
       color: #fff;
-      font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: inherit;
+      font-size: var(--dsh-content-font-size-secondary, 13px);
+      line-height: 1.4;
       pointer-events: none;
     }
     [data-dsh-pinned="true"] [data-dsh-workspace-title],
@@ -949,15 +955,15 @@ function SettingsPage(props: SettingsPageProps): ReactNode {
   }
   const title: CSSProperties = {
     margin: 0,
-    fontSize: 14,
+    fontSize: 'var(--dsh-content-font-size, 14px)',
     fontWeight: 400,
-    lineHeight: '22px',
+    lineHeight: 1.57,
     color: 'var(--dsw-alias-label-primary, inherit)',
   }
   const desc: CSSProperties = {
     margin: 0,
-    fontSize: 12,
-    lineHeight: '18px',
+    fontSize: 'calc(var(--dsh-content-font-size-secondary, 13px) * 0.923)',
+    lineHeight: 1.5,
     color: 'var(--dsw-alias-label-tertiary, inherit)',
   }
   const body: CSSProperties = {
@@ -968,9 +974,9 @@ function SettingsPage(props: SettingsPageProps): ReactNode {
   }
   const groupTitle: CSSProperties = {
     padding: '12px 0 2px',
-    fontSize: 12,
+    fontSize: 'calc(var(--dsh-content-font-size-secondary, 13px) * 0.923)',
     fontWeight: 600,
-    lineHeight: '18px',
+    lineHeight: 1.5,
     color: 'var(--dsw-alias-label-tertiary, inherit)',
     textTransform: 'uppercase',
     letterSpacing: '.04em',
@@ -981,8 +987,8 @@ function SettingsPage(props: SettingsPageProps): ReactNode {
     justifyContent: 'space-between',
     gap: 12,
     minHeight: 36,
-    fontSize: 13,
-    lineHeight: '20px',
+    fontSize: 'var(--dsh-content-font-size-secondary, 13px)',
+    lineHeight: 1.54,
     color: 'var(--dsw-alias-label-primary, inherit)',
   }
 

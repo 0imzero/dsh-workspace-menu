@@ -1,6 +1,6 @@
 {
   "name": "@dsh-external/dsh-workspace-menu",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "DSH 主页工作区/会话右键与双击增强菜单：置顶、重命名、资源管理器打开、归档、分叉、复制、新窗口等（DSH 0.2.x 适配版）",
   "repository": {
     "type": "git",
