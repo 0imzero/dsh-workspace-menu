@@ -17,7 +17,7 @@
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { rm } from 'node:fs/promises'
+import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { isAbsolute, join, normalize, resolve, sep } from 'node:path'
 import type { Context } from 'cordis'
@@ -50,10 +50,19 @@ interface WebStartup {
 type AppContext = Context & {
   webServer: WebServer
   webStartup: WebStartup
+  sessionPersistence: { stat(id: string): Promise<unknown>; open(id: string, access: 'write'): Promise<{ close(): Promise<void> }> }
+  sessions: { get(id: string): unknown }
+  workspaceRegistry: {
+    archivedSessionIds: readonly string[]
+    archiveSession(id: string, options?: { stopActivity?: boolean }): Promise<void>
+    unarchiveSession(id: string): Promise<void>
+    unpinSession(id: string): Promise<void>
+    list(): Array<{ sessionIds: readonly string[]; detachSession(id: string): Promise<void> }>
+  }
 }
 
 export const name = '@dsh-external/dsh-workspace-menu'
-export const inject = ['webServer', 'webStartup']
+export const inject = ['webServer', 'webStartup', 'sessionPersistence', 'sessions', 'workspaceRegistry']
 
 interface RouteLease {
   references: number
@@ -259,13 +268,61 @@ function isValidSessionId(id: string): boolean {
   return id !== '.' && id !== '..' && /^[A-Za-z0-9._-]{1,128}$/.test(id)
 }
 
-async function deleteSessionRecord(sessionId: string): Promise<void> {
-  const record = findSessionRecord(sessionId)
-  if (record === undefined) {
-    // Nothing on disk to remove (the Session may never have written a log).
-    return
+const pendingInFlight = new Set<string>()
+function pendingDir(): string { return join(dshHome(), 'workspace-menu-pending-deletions') }
+function pendingPath(id: string): string { return join(pendingDir(), `${id}.json`) }
+
+async function processPending(ctx: AppContext, id: string): Promise<boolean> {
+  if (pendingInFlight.has(id)) return false
+  pendingInFlight.add(id)
+  try {
+    // Unarchiving explicitly cancels a queued deletion.
+    if (!ctx.workspaceRegistry.archivedSessionIds.includes(id)) {
+      await rm(pendingPath(id), { force: true })
+      return false
+    }
+    if (ctx.sessions.get(id)) return false
+    const snapshot = await ctx.sessionPersistence.stat(id)
+    if (snapshot !== undefined) {
+      const handle = await ctx.sessionPersistence.open(id, 'write')
+      const record = findSessionRecord(id)
+      await handle.close()
+      if (!record) throw new Error('session record not found under DSH_HOME')
+      if (ctx.sessions.get(id)) return false
+      await rm(record, { recursive: true, force: true })
+    } else if (findSessionRecord(id)) {
+      throw new Error('session storage could not be verified')
+    }
+    for (const workspace of ctx.workspaceRegistry.list()) {
+      if (workspace.sessionIds.includes(id)) await workspace.detachSession(id)
+    }
+    await ctx.workspaceRegistry.unpinSession(id)
+    await ctx.workspaceRegistry.unarchiveSession(id)
+    await rm(pendingPath(id), { force: true })
+    return true
+  } catch (error) {
+    console.warn('[dsh-workspace-menu] pending deletion will be retried', id, error)
+    return false
+  } finally {
+    pendingInFlight.delete(id)
   }
-  await rm(record, { recursive: true, force: true })
+}
+
+async function queueSessionDeletion(ctx: AppContext, id: string): Promise<boolean> {
+  await mkdir(pendingDir(), { recursive: true })
+  await ctx.workspaceRegistry.archiveSession(id, { stopActivity: true })
+  await writeFile(pendingPath(id), JSON.stringify({ version: 1, id }), { flag: 'w' })
+  return processPending(ctx, id)
+}
+
+async function retryPending(ctx: AppContext): Promise<void> {
+  let entries: string[]
+  try { entries = await readdir(pendingDir()) } catch { return }
+  for (const name of entries) {
+    if (!name.endsWith('.json')) continue
+    const id = name.slice(0, -5)
+    if (isValidSessionId(id)) await processPending(ctx, id)
+  }
 }
 
 function acquireRoutes(ctx: AppContext): () => void {
@@ -348,8 +405,8 @@ function acquireRoutes(ctx: AppContext): () => void {
             writeJson(res, 400, { ok: false, error: { code: 'bad-request', message: 'invalid session id' } })
             return
           }
-          await deleteSessionRecord(raw)
-          writeJson(res, 200, { ok: true })
+          const deleted = await queueSessionDeletion(ctx, raw)
+          writeJson(res, 200, { ok: true, deleted, queued: !deleted })
         } catch (error) {
           writeJson(res, 400, { ok: false, error: { code: 'delete-failed', message: error instanceof Error ? error.message : String(error) } })
         }
@@ -374,5 +431,11 @@ function releaseRoutes(key: object, lease: RouteLease): void {
 }
 
 export function apply(ctx: AppContext): void {
-  ctx.effect(() => acquireRoutes(ctx), '@dsh-external/dsh-workspace-menu: host routes')
+  ctx.effect(() => {
+    const dispose = acquireRoutes(ctx)
+    void retryPending(ctx)
+    const timer = setInterval(() => { void retryPending(ctx) }, 30_000)
+    timer.unref?.()
+    return () => { clearInterval(timer); dispose() }
+  }, '@dsh-external/dsh-workspace-menu: host routes')
 }

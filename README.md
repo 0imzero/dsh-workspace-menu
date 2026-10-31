@@ -11,7 +11,7 @@
 从 [Releases](https://github.com/0imzero/dsh-workspace-menu/releases/latest) 下载安装包，在安装包所在目录运行：
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.1.tgz
+dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.2.tgz
 ```
 
 重启 DSH 后，在首页右键或双击工作区、会话即可使用。菜单项可以在 **设置 → 工作区菜单** 中分别开关；设置界面支持中文和英文。
@@ -34,6 +34,7 @@ dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.1.tgz
 ## 使用说明
 
 - 会话置顶与 DSH 自带的置顶功能共用状态；工作区置顶和会话未读标记保存在当前浏览器的 localStorage 中。
+- 删除会话时会先归档并切到新对话；如果记录仍被 DSH 占用，插件会稍后重试。取消归档可取消尚未执行的删除。
 - 文件管理器使用 Windows 资源管理器、macOS Finder，或 Linux 上可用的 `xdg-open`、`gio` 等程序。
 - 新窗口使用插件提供的 `?session=<id>` 链接打开对应会话。
 - 永久删除由插件的宿主路由处理，无需安装 `@mlgbnb/dsh-archive-manager`。会话记录位于 `$DSH_HOME/sessions/<工作区 slug>/<sessionId>/`。

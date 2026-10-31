@@ -1,8 +1,14 @@
 {
   "name": "@dsh-external/dsh-workspace-menu",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "DSH 主页工作区/会话右键与双击增强菜单：置顶、重命名、资源管理器打开、归档、分叉、复制、新窗口等（DSH 0.2.x 适配版）",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0imzero/dsh-workspace-menu.git"
+  },
+  "homepage": "https://github.com/0imzero/dsh-workspace-menu#readme",
+  "bugs": "https://github.com/0imzero/dsh-workspace-menu/issues",
+  "publishConfig": { "access": "public" },
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
@@ -31,7 +37,7 @@
     "build:client": "tsdown",
     "typecheck": "tsc -p tsconfig.host.json --noEmit && tsc -p tsconfig.client.json",
     "check": "node scripts/check.mjs",
-    "test": "node scripts/test-routes.mjs"
+    "test": "node scripts/test-routes.mjs && node --experimental-strip-types scripts/test-delete-flow.mjs"
   },
   "exports": {
     ".": {

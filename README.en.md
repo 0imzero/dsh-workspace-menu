@@ -11,7 +11,7 @@ Add a context menu to workspaces and chats on the DSH home page. Right-click or 
 Download the package from [Releases](https://github.com/0imzero/dsh-workspace-menu/releases/latest), then run this command from the download directory:
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.1.tgz
+dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.2.tgz
 ```
 
 Restart DSH, then right-click or double-click a workspace or chat on the home page. You can turn individual actions on or off under **Settings → Workspace menu**. The settings page is available in English and Chinese.
@@ -34,6 +34,7 @@ Restart DSH, then right-click or double-click a workspace or chat on the home pa
 ## Notes
 
 - Chat pins share the state used by DSH's built-in pin button. Workspace pins and unread markers are stored in the current browser's localStorage.
+- Deleting a chat archives it and opens a new chat first. If DSH still holds the record, deletion is retried later; unarchiving cancels a pending deletion.
 - The file manager action uses Windows Explorer, macOS Finder, or an available Linux program such as `xdg-open` or `gio`.
 - Opening a chat in a new window uses the plugin's `?session=<id>` link.
 - Permanent deletion is handled by the plugin's host routes; `@mlgbnb/dsh-archive-manager` is not required. Session records live under `$DSH_HOME/sessions/<workspace-slug>/<sessionId>/`.

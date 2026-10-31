@@ -23,6 +23,27 @@ interface WebStartup {
 type AppContext = Context & {
     webServer: WebServer;
     webStartup: WebStartup;
+    sessionPersistence: {
+        stat(id: string): Promise<unknown>;
+        open(id: string, access: 'write'): Promise<{
+            close(): Promise<void>;
+        }>;
+    };
+    sessions: {
+        get(id: string): unknown;
+    };
+    workspaceRegistry: {
+        archivedSessionIds: readonly string[];
+        archiveSession(id: string, options?: {
+            stopActivity?: boolean;
+        }): Promise<void>;
+        unarchiveSession(id: string): Promise<void>;
+        unpinSession(id: string): Promise<void>;
+        list(): Array<{
+            sessionIds: readonly string[];
+            detachSession(id: string): Promise<void>;
+        }>;
+    };
 };
 export declare const name = "@dsh-external/dsh-workspace-menu";
 export declare const inject: string[];

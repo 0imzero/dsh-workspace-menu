@@ -26,6 +26,7 @@ import type {
   WorkspaceView,
 } from './types.ts'
 import { en, NS, zh } from './locales.ts'
+import { leaveAndDelete } from './delete-flow.ts'
 
 type ClientContext = Context & {
   slots: SlotsService
@@ -248,7 +249,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-async function postJson(path: string, body: unknown): Promise<void> {
+async function postJson(path: string, body: unknown): Promise<{ deleted?: boolean; queued?: boolean }> {
   const response = await fetch(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -265,6 +266,7 @@ async function postJson(path: string, body: unknown): Promise<void> {
     }
     throw new Error(message)
   }
+  return await response.json() as { deleted?: boolean; queued?: boolean }
 }
 
 /** 调用宿主路由，在操作系统文件管理器（Windows 资源管理器等）中打开目录或定位文件。 */
@@ -278,8 +280,9 @@ async function deleteWorkspaceDirectory(path: string): Promise<void> {
 }
 
 /** 永久删除会话记录（宿主的 session 日志目录）。 */
-async function deleteSessionRecord(sessionId: string): Promise<void> {
-  await postJson('/dsh-workspace-menu/delete-session', { sessionId })
+async function deleteSessionRecord(sessionId: string): Promise<boolean> {
+  const result = await postJson('/dsh-workspace-menu/delete-session', { sessionId })
+  return result.deleted === true
 }
 
 function flashMessage(message: string): void {
@@ -557,7 +560,7 @@ function workspaceMenu(ctx: ClientContext, workspaceId: string, title: string): 
         if (!second) return
         const run = async (): Promise<void> => {
           for (const sessionId of ws.sessionIds) {
-            await deleteSessionRecord(sessionId)
+            if (!await deleteSessionRecord(sessionId)) throw new Error(t('toast.deletionPending'))
           }
           await deleteWorkspaceDirectory(ws.path)
           await ctx.workspaces.delete(workspaceId)
@@ -718,9 +721,10 @@ function sessionMenu(ctx: ClientContext, sessionId: string, title: string): Menu
         if (!first) return
         const second = window.confirm(t('dialog.deleteSessionTwice', { title }))
         if (!second) return
-        deleteSessionRecord(sessionId).then(() => {
-          flashMessage(t('toast.sessionDeleted'))
-          void ctx.sessions.refresh()
+        const workspaceId = ctx.workspaces.list.getSnapshot().items.find((workspace) => workspace.sessionIds.includes(sessionId))?.workspaceId
+        leaveAndDelete(ctx.uiWorkspace, sessionId, workspaceId, deleteSessionRecord).then((deleted) => {
+          flashMessage(deleted ? t('toast.sessionDeleted') : t('toast.deletionPending'))
+          void ctx.sessions.refresh().catch((e) => console.warn('[dsh-workspace-menu] refresh failed', e))
         }).catch((e) => {
           console.warn('[dsh-workspace-menu] delete session failed', e)
           flashMessage(t('toast.deleteFailed', { reason: e instanceof Error ? e.message : String(e) }))

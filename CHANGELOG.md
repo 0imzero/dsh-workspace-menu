@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+- Leave the current chat before deleting it, so its row can disappear without a manual page refresh.
+- Archive and queue sessions that are still in use, then retry deletion when possible and after restart. Unarchiving cancels a pending deletion.
+- Stop workspace directory deletion while one of its session deletions is still pending.
+
 ## 2.0.1
 
 - Reject `.` and `..` as session IDs and skip linked session buckets when deleting records.

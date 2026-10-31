@@ -88,6 +88,7 @@ export interface ISessions {
 /** The Workspace navigation/action service (`ctx.uiWorkspace`). */
 export interface UiWorkspace {
   openSession(target: string): void
+  openWorkspace(workspaceId: string): Promise<void>
   startSession(workspaceId?: string, options?: { agentPreset?: string }): void
   archiveSession(sessionId: string, options?: { stopActivity?: boolean }): Promise<void>
   unarchiveSession(sessionId: string): Promise<void>
