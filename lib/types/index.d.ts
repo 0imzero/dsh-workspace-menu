@@ -45,7 +45,7 @@ type AppContext = Context & {
         }>;
     };
 };
-export declare const name = "@dsh-external/dsh-workspace-menu";
+export declare const name = "@0imzero/dsh-workspace-menu";
 export declare const inject: string[];
 export declare function apply(ctx: AppContext): void;
 export {};

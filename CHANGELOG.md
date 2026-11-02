@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.4
+
+- Align the repository package name, bundle patch, and client module ID with the published `@0imzero/dsh-workspace-menu` package.
+- Installations using the previous `@dsh-external/dsh-workspace-menu` name should remove it before installing the new package.
+
 ## 2.0.3
 
 - Match the DSH Web font and font-size settings in menus, rename dialogs, notifications, and the plugin settings page.

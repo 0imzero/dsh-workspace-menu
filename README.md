@@ -17,12 +17,12 @@ dsh plugin --profile web add @0imzero/dsh-workspace-menu
 也可以从 [Releases](https://github.com/0imzero/dsh-workspace-menu/releases/latest) 下载安装包，在安装包所在目录运行：
 
 ```bash
-dsh plugin --profile web add dsh-external-dsh-workspace-menu-2.0.3.tgz
+dsh plugin --profile web add 0imzero-dsh-workspace-menu-2.0.4.tgz
 ```
 
 重启 DSH 后，在首页右键或双击工作区、会话即可使用。菜单项可以在 **设置 → 工作区菜单** 中分别开关；设置界面支持中文和英文。
 
-从旧版包 `@dsh-external/dsh-workspace-menu` 切换到 npm 版时，请先移除旧版，避免重复加载。
+从旧版包 `@dsh-external/dsh-workspace-menu` 切换时，请先移除旧版，再安装 `@0imzero/dsh-workspace-menu`，避免重复加载。GitHub 源码安装也使用新包名。
 
 ## 能做什么
 

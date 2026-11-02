@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'tsdown'
 
-const PLUGIN_ID = "@dsh-external/dsh-workspace-menu"
+const PLUGIN_ID = "@0imzero/dsh-workspace-menu"
 
 /**
  * DSH 0.2.x client externals.

@@ -1,5 +1,5 @@
 /**
- * @dsh-external/dsh-workspace-menu — host half (DSH 0.2.x).
+ * @0imzero/dsh-workspace-menu — host half (DSH 0.2.x).
  *
  * 提供真正的“在系统文件管理器中打开”能力：浏览器端请求本路由，
  * Host 按平台调用对应文件管理器：
@@ -61,7 +61,7 @@ type AppContext = Context & {
   }
 }
 
-export const name = '@dsh-external/dsh-workspace-menu'
+export const name = '@0imzero/dsh-workspace-menu'
 export const inject = ['webServer', 'webStartup', 'sessionPersistence', 'sessions', 'workspaceRegistry']
 
 interface RouteLease {
@@ -437,5 +437,5 @@ export function apply(ctx: AppContext): void {
     const timer = setInterval(() => { void retryPending(ctx) }, 30_000)
     timer.unref?.()
     return () => { clearInterval(timer); dispose() }
-  }, '@dsh-external/dsh-workspace-menu: host routes')
+  }, '@0imzero/dsh-workspace-menu: host routes')
 }

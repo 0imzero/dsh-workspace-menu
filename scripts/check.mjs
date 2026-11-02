@@ -25,6 +25,20 @@ for (const file of ['lib/index.js', 'lib/client.js', 'cordis.patch.yml']) {
   }
 }
 
+if (pkg.dsh?.bundle?.patch && existsSync(resolve(root, pkg.dsh.bundle.patch))) {
+  const patch = readFileSync(resolve(root, pkg.dsh.bundle.patch), 'utf8')
+  if (!patch.includes(`name: '${pkg.name}'`)) {
+    errors.push('bundle patch does not load the package declared in package.json')
+  }
+}
+
+if (existsSync(resolve(root, 'lib/client.js'))) {
+  const client = readFileSync(resolve(root, 'lib/client.js'), 'utf8')
+  if (!client.includes(`id: "${pkg.name}"`) && !client.includes(`id: '${pkg.name}'`)) {
+    errors.push('client module ID does not match package.json')
+  }
+}
+
 if (errors.length > 0) {
   console.error('check failed:')
   for (const error of errors) console.error(`- ${error}`)
