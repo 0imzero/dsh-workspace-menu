@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.4
+## 2.1.0
 
 - Align the repository package name, bundle patch, and client module ID with the published `@0imzero/dsh-workspace-menu` package.
 - Installations using the previous `@dsh-external/dsh-workspace-menu` name should remove it before installing the new package.
